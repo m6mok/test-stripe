@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:15
+    restart: always
+    env_file:
+      - ./env/local/postgres.env
+    ports:
+      - "${DATABASE_PORT}:3306"
+    command: -p 3306
+    volumes:
+      - db:/var/lib/postgresql/data/
+    extra_hosts:
+      - db:172.18.0.2
+
+  web:
+    build: .
+    command: sh -c
+      "python manage.py makemigrations && \
+      python manage.py migrate && \
+      python manage.py collectstatic --noinput && \
+      python manage.py create_superuser_from_env && \
+      python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "${WEBSITE_PORT}:8000"
+    volumes:
+      - app:/app
+    depends_on:
+      - db
+    env_file:
+      - ./env/local/project.env
+    environment:
+      DATABASE_ENGINE: "django.db.backends.postgresql_psycopg2"
+      DATABASE_NAME: ${POSTGRES_DB}
+      DATABASE_USER: ${POSTGRES_USER}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+
+volumes:
+  db:
+  app:
