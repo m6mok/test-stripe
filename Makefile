@@ -29,3 +29,11 @@ _rebuild :
 	docker volume rm test-stripe_app
 	docker builder prune -f
 	make up
+
+drop :
+	make --ignore-errors _drop
+
+_drop : # deletes the volume of database
+	docker stop test-stripe-db-1
+	docker rm test-stripe-db-1
+	docker volume rm test-stripe_db

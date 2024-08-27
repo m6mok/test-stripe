@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import views, stripe_views
 
 
 app_name='api'
@@ -9,9 +9,8 @@ app_name='api'
 urlpatterns = [
     path(
         'buy/<int:pk>/',
-        views.create_checkout_session,
-        name='create_checkout_session'
+        stripe_views.create_payment,
+        name='create_payment'
     ),
-    path('item/<int:pk>/', views.item_detail, name='item_detail'),
     path('order/<int:pk>/', views.order_detail, name='order_detail'),
 ]

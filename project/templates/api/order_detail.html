@@ -1,41 +1,99 @@
 {% extends 'base.html' %}
 
+{% block title %}
+    Заказ #{{ order.pk }}
+{% endblock %}
+
 {% block content %}
-    <h1>Order #{{ order.pk }}</h1>
-    <ul>
-        {% for item in order.items.all %}
-            <li>{{ item.name }} - ${{ item.price }}</li>
-        {% endfor %}
-    </ul>
-    <button id="buy-button" onclick="fetch_session()">Buy</button>
+    <div class="container">
+        <h1 class="mb-4 mt-5">Заказ #{{ order.id }}</h1>
+        <div class="row row-cols-1 row-cols-lg-2">
+            <div class="col mb-3 pe-md-2">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="order-summary mb-4">
+                            <h5 class="card-title">Информация о заказе</h5>
+                            <p><strong>Товары:</strong></p>
+                            <ul class="list-unstyled">
+                                {% for item in order.items.all %}
+                                    <li class="mb-2">{{ item.name }} - ${{ item.price }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% if order.discount %}
+                                <p><strong>Скидка:</strong> {{ order.discount.name }} - {{ order.discount.percentage }}%</p>
+                            {% endif %}
+                            {% if order.tax %}
+                                <p><strong>Налог:</strong> {{ order.tax.name }} - {{ order.tax.percentage }}%</p>
+                            {% endif %}
+                            <p><strong>Итого:</strong> {{ order.total_price|stringformat:"0.2f" }} {{ currency_name }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col ps-md-2">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="payment-form">
+                            <h5 class="card-title">Оплата</h5>
+                            <form id="payment-form">
+                                <div id="card-element" class="mt-2 mb-3">
+                                    <!-- A Stripe Element will be inserted here. -->
+                                </div>
+                                <div class="text-end">
+                                    <button type="submit" class="btn btn-success">Оплатить</button>
+                                </div>
+                                <div id="error-message" class="mt-3"></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
 {% endblock %}
 
 {% block script %}
     <script src="https://js.stripe.com/v3/"></script>
     <script type="text/javascript">
-        function fetch_session() {
-            var stripe = Stripe('{{ stripe_public_key }}');
-            fetch("{% url 'api:create_checkout_session' order.pk %}")
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        console.error('Error creating checkout session:', data.error);
-                        alert('Failed to create checkout session.');
-                        return;
-                    }
+        const stripe = Stripe('{{ stripe_public_key }}');
+        let clientSecret = null;
 
-                    console.info('Session ID =', data.session_id)
+        fetch("{% url 'api:create_payment' order.id %}")
+            .then(response => response.json())
+            .then(data => {
+                clientSecret = data.client_secret;
 
-                    return stripe.redirectToCheckout({ sessionId: data.session_id });
-                })
-                .then((result) => {
-                    if (result.error) {
-                        alert(result.error.message);
-                    }
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                });
-        }
+                const elements = stripe.elements();
+                const cardElement = elements.create('card');
+                cardElement.mount('#card-element');
+            })
+            .then((result) => {
+                if (result.error) {
+                    alert(result.error.message);
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+
+        const form = document.getElementById('payment-form');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const {error, paymentIntent} = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: stripe.elements().getElement('card'),
+                }
+            });
+
+            if (error) {
+                document.getElementById('error-message').textContent = error.message;
+            } else {
+                if (paymentIntent.status === 'succeeded') {
+                    alert('Payment succeeded!');
+                }
+            }
+        });
     </script>
 {% endblock %}
