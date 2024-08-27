@@ -13,4 +13,5 @@ urlpatterns = [
         name='create_checkout_session'
     ),
     path('item/<int:pk>/', views.item_detail, name='item_detail'),
+    path('order/<int:pk>/', views.order_detail, name='order_detail'),
 ]
