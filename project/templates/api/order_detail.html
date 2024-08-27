@@ -1,9 +1,12 @@
 {% extends 'base.html' %}
 
-{% block content%}
-    <h1>{{ item.name }}</h1>
-    <p>{{ item.description }}</p>
-    <p>Price: ${{ item.price }}</p>
+{% block content %}
+    <h1>Order #{{ order.pk }}</h1>
+    <ul>
+        {% for item in order.items.all %}
+            <li>{{ item.name }} - ${{ item.price }}</li>
+        {% endfor %}
+    </ul>
     <button id="buy-button" onclick="fetch_session()">Buy</button>
 {% endblock %}
 
@@ -12,7 +15,7 @@
     <script type="text/javascript">
         function fetch_session() {
             var stripe = Stripe('{{ stripe_public_key }}');
-            fetch("{% url 'api:create_checkout_session' item.id %}")
+            fetch("{% url 'api:create_checkout_session' order.pk %}")
                 .then(response => response.json())
                 .then(data => {
                     if (data.error) {
